@@ -33,7 +33,11 @@ from app.db.engine import get_session
 from app.repositories.positions import PositionsRepository
 from app.repositories.quote_snapshots import QuoteSnapshotsRepository
 from app.repositories.users import UsersRepository
-from app.services.market_data import fetch_quotes_from_market_data
+from app.services.market_data import (
+    MarketDataValidationError,
+    fetch_quotes_from_market_data,
+    ticker_exists_in_market_data,
+)
 from app.services.realtime import Emitter
 
 log = logging.getLogger(__name__)
@@ -298,10 +302,24 @@ async def create_position(
 ) -> PositionResponse:
     repo = PositionsRepository(session=session)
 
-    if not payload.ticker.strip():
-        raise HTTPException(status_code=400, detail="ticker, quantity and buyPrice are required")
-
     ticker = payload.ticker.strip().upper()
+    if not ticker:
+        raise HTTPException(status_code=400, detail="Ticker is required.")
+
+    try:
+        ticker_exists = await asyncio.to_thread(
+            ticker_exists_in_market_data,
+            settings.market_data_service_url,
+            ticker,
+        )
+    except MarketDataValidationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if not ticker_exists:
+        raise HTTPException(
+            status_code=400,
+            detail="Please select a valid market symbol from the search results.",
+        )
 
     pos = await repo.create(
         user_id=user_id,

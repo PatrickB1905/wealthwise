@@ -5,6 +5,8 @@ import dayjs, { type Dayjs } from 'dayjs';
 import API from '@shared/lib/axios';
 import { usePositionWS } from '@features/portfolio/hooks/usePositionWS';
 import { useQuotes, type RemoteQuote } from '@features/market-data/hooks/useQuotes';
+import type { InstrumentSearchResult } from '@features/market-data/api/marketDataClient';
+import { formatInstrumentInputValue } from '../components/InstrumentAutocomplete.utils';
 
 import { EMPTY_POSITIONS } from '../constants/positions';
 import type { Position } from '../types/position';
@@ -56,6 +58,7 @@ export type PositionsPageVM = {
 
   // Form fields
   newTicker: string;
+  selectedInstrument: InstrumentSearchResult | null;
   newQuantity: string;
   newBuyPrice: string;
   newBuyDate: Dayjs | null;
@@ -70,6 +73,7 @@ export type PositionsPageVM = {
 
   // Form setters
   setNewTicker: (v: string) => void;
+  setSelectedInstrument: (instrument: InstrumentSearchResult | null) => void;
   setNewQuantity: (v: string) => void;
   setNewBuyPrice: (v: string) => void;
   setNewBuyDate: (v: Dayjs | null) => void;
@@ -111,6 +115,7 @@ const BUY_DATE_INVALID_MESSAGE = 'Enter a valid buy date';
 const SELL_PRICE_REQUIRED_MESSAGE = 'Sell price is required';
 const SELL_DATE_REQUIRED_MESSAGE = 'Sell date is required';
 const SELL_DATE_INVALID_MESSAGE = 'Enter a valid sell date';
+const TICKER_REQUIRED_MESSAGE = 'Please select a valid ticker from the list';
 
 function parsePositiveNumber(value: string): number | null {
   const trimmed = value.trim();
@@ -136,6 +141,24 @@ function parseRequiredNumberAllowZero(value: string): number | null {
   return parsed;
 }
 
+function extractApiErrorDetail(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) {
+    return undefined;
+  }
+
+  const response = (error as { response?: { data?: unknown } }).response;
+  const data = response?.data;
+
+  if (typeof data === 'object' && data !== null && 'detail' in data) {
+    const detail = (data as { detail?: unknown }).detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim();
+    }
+  }
+
+  return undefined;
+}
+
 export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   usePositionWS();
   const qc = useQueryClient();
@@ -149,6 +172,7 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   const [selected, setSelected] = useState<Position | null>(null);
 
   const [newTicker, setNewTicker] = useState('');
+  const [selectedInstrument, setSelectedInstrument] = useState<InstrumentSearchResult | null>(null);
   const [newQuantity, setNewQuantity] = useState('');
   const [newBuyPrice, setNewBuyPrice] = useState('');
   const [newBuyDate, setNewBuyDate] = useState<Dayjs | null>(dayjs());
@@ -161,10 +185,16 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   const [sellPriceError, setSellPriceError] = useState('');
   const [sellDateError, setSellDateError] = useState('');
 
-  const [toast, setToast] = useState<ToastState>({ open: false, message: '', severity: 'success' });
+  const [toast, setToast] = useState<ToastState>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
+
   const showToast = (message: string, severity: ToastSeverity = 'success') => {
     setToast({ open: true, message, severity });
   };
+
   const closeToast = () => setToast((t) => ({ ...t, open: false }));
 
   const positionsQuery = useQuery<Position[], Error>({
@@ -185,9 +215,11 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   const quotesLoading = quotesResult.isLoading;
 
   const quotesMap = useMemo<Record<string, RemoteQuote>>(() => {
-    const m: Record<string, RemoteQuote> = {};
-    for (const q of quotesArray) m[normalizeSymbol(q.symbol)] = q;
-    return m;
+    const map: Record<string, RemoteQuote> = {};
+    for (const quote of quotesArray) {
+      map[normalizeSymbol(quote.symbol)] = quote;
+    }
+    return map;
   }, [quotesArray]);
 
   const pricing = useMemo<PricingTotals>(() => {
@@ -195,22 +227,23 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     let profitKnown = 0;
     let missingQuotes = 0;
 
-    for (const p of positions) {
-      const cost = p.buyPrice * p.quantity;
+    for (const position of positions) {
+      const cost = position.buyPrice * position.quantity;
       invested += cost;
 
       if (tab === 'closed') {
-        const price = isFiniteNumber(p.sellPrice) ? p.sellPrice : p.buyPrice;
-        profitKnown += price * p.quantity - cost;
+        const sellPrice = isFiniteNumber(position.sellPrice) ? position.sellPrice : position.buyPrice;
+        profitKnown += sellPrice * position.quantity - cost;
         continue;
       }
 
-      const q = quotesMap[normalizeSymbol(p.ticker)];
-      if (!q || !isFiniteNumber(q.currentPrice)) {
+      const quote = quotesMap[normalizeSymbol(position.ticker)];
+      if (!quote || !isFiniteNumber(quote.currentPrice)) {
         missingQuotes += 1;
         continue;
       }
-      profitKnown += q.currentPrice * p.quantity - cost;
+
+      profitKnown += quote.currentPrice * position.quantity - cost;
     }
 
     const profitPctKnown = invested ? (profitKnown / invested) * 100 : 0;
@@ -227,22 +260,25 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   const totalsPctTone = toneFromNumber(pricing.totalProfitPctKnown);
 
   const [showQuoteAlert, setShowQuoteAlert] = useState(false);
+
   useEffect(() => {
     if (tab !== 'open') {
       setShowQuoteAlert(false);
       return;
     }
+
     if (quotesLoading) {
       setShowQuoteAlert(false);
       return;
     }
+
     if (pricing.missingQuotes <= 0) {
       setShowQuoteAlert(false);
       return;
     }
 
-    const t = window.setTimeout(() => setShowQuoteAlert(true), 2500);
-    return () => window.clearTimeout(t);
+    const timeoutId = window.setTimeout(() => setShowQuoteAlert(true), 2500);
+    return () => window.clearTimeout(timeoutId);
   }, [pricing.missingQuotes, quotesLoading, tab]);
 
   const headerSubtitle =
@@ -267,10 +303,18 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['positions', 'open'] });
       setAddOpen(false);
+      setSelectedInstrument(null);
+      setNewTicker('');
       showToast(`Added ${normalizeSymbol(created.ticker)} to your portfolio.`, 'success');
     },
-    onError: () => {
-      showToast('Could not add the position. Please try again.', 'error');
+    onError: (error) => {
+      const detail = extractApiErrorDetail(error);
+
+      if (detail && /ticker|symbol/i.test(detail)) {
+        setTickerError(detail);
+      }
+
+      showToast(detail ?? 'Could not add the position. Please try again.', 'error');
     },
   });
 
@@ -291,8 +335,9 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
       setSelected(null);
       showToast(`Closed ${normalizeSymbol(updated.ticker)} successfully.`, 'success');
     },
-    onError: () => {
-      showToast('Could not close the position. Please try again.', 'error');
+    onError: (error) => {
+      const detail = extractApiErrorDetail(error);
+      showToast(detail ?? 'Could not close the position. Please try again.', 'error');
     },
   });
 
@@ -315,8 +360,9 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
       setSelected(null);
       showToast(`Updated ${normalizeSymbol(updated.ticker)} successfully.`, 'success');
     },
-    onError: () => {
-      showToast('Could not update the position. Please try again.', 'error');
+    onError: (error) => {
+      const detail = extractApiErrorDetail(error);
+      showToast(detail ?? 'Could not update the position. Please try again.', 'error');
     },
   });
 
@@ -324,15 +370,32 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     mutationFn: (id) => API.delete(`/positions/${id}`).then(() => undefined),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['positions', tab] });
-      const sym = selected?.ticker ? normalizeSymbol(selected.ticker) : 'position';
+      const symbol = selected?.ticker ? normalizeSymbol(selected.ticker) : 'position';
       setDeleteOpen(false);
       setSelected(null);
-      showToast(`Deleted ${sym} successfully.`, 'success');
+      showToast(`Deleted ${symbol} successfully.`, 'success');
     },
-    onError: () => {
-      showToast('Could not delete the position. Please try again.', 'error');
+    onError: (error) => {
+      const detail = extractApiErrorDetail(error);
+      showToast(detail ?? 'Could not delete the position. Please try again.', 'error');
     },
   });
+
+  const validateTicker = (): string | null => {
+    if (!selectedInstrument) {
+      setTickerError(TICKER_REQUIRED_MESSAGE);
+      return null;
+    }
+
+    const normalizedSymbol = normalizeSymbol(selectedInstrument.symbol);
+    if (!normalizedSymbol) {
+      setTickerError(TICKER_REQUIRED_MESSAGE);
+      return null;
+    }
+
+    setTickerError('');
+    return normalizedSymbol;
+  };
 
   const validateQuantity = (): number | null => {
     const parsedQuantity = parsePositiveNumber(newQuantity);
@@ -367,6 +430,7 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
       setBuyDateError(BUY_DATE_REQUIRED_MESSAGE);
       return null;
     }
+
     if (!newBuyDate.isValid()) {
       setBuyDateError(BUY_DATE_INVALID_MESSAGE);
       return null;
@@ -409,11 +473,8 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   };
 
   const onAddSubmit = () => {
-    setTickerError('');
-
-    const sym = normalizeSymbol(newTicker);
-    if (!sym) {
-      setTickerError('Ticker is required');
+    const ticker = validateTicker();
+    if (ticker === null) {
       return;
     }
 
@@ -433,7 +494,7 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     }
 
     addPosition.mutate({
-      ticker: sym,
+      ticker,
       quantity,
       buyPrice,
       buyDate,
@@ -441,7 +502,9 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   };
 
   const onCloseSubmit = () => {
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
 
     const sellPrice = validateSellPrice();
     if (sellPrice === null) {
@@ -461,7 +524,9 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   };
 
   const onEditSubmit = () => {
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
 
     const quantity = validateQuantity();
     if (quantity === null) {
@@ -503,12 +568,16 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
   };
 
   const onDeleteConfirm = () => {
-    if (!selected) return;
+    if (!selected) {
+      return;
+    }
+
     deletePosition.mutate(selected.id);
   };
 
   const openAddDialog = () => {
     setNewTicker('');
+    setSelectedInstrument(null);
     setNewQuantity('');
     setNewBuyPrice('');
     setNewBuyDate(dayjs());
@@ -519,13 +588,13 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     setAddOpen(true);
   };
 
-  const openDeleteDialog = (pos: Position) => {
-    setSelected(pos);
+  const openDeleteDialog = (position: Position) => {
+    setSelected(position);
     setDeleteOpen(true);
   };
 
-  const openCloseDialog = (pos: Position) => {
-    setSelected(pos);
+  const openCloseDialog = (position: Position) => {
+    setSelected(position);
     setNewSellPrice('');
     setNewSellDate(dayjs());
     setSellPriceError('');
@@ -533,11 +602,11 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     setCloseOpen(true);
   };
 
-  const openEditDialog = (pos: Position) => {
-    setSelected(pos);
-    setNewQuantity(String(pos.quantity));
-    setNewBuyPrice(String(pos.buyPrice));
-    setNewBuyDate(dayjs(pos.buyDate));
+  const openEditDialog = (position: Position) => {
+    setSelected(position);
+    setNewQuantity(String(position.quantity));
+    setNewBuyPrice(String(position.buyPrice));
+    setNewBuyDate(dayjs(position.buyDate));
     setQuantityError('');
     setBuyPriceError('');
     setBuyDateError('');
@@ -545,8 +614,8 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     setSellDateError('');
 
     if (tab === 'closed') {
-      setNewSellDate(pos.sellDate ? dayjs(pos.sellDate) : dayjs());
-      setNewSellPrice(isFiniteNumber(pos.sellPrice) ? String(pos.sellPrice) : '');
+      setNewSellDate(position.sellDate ? dayjs(position.sellDate) : dayjs());
+      setNewSellPrice(isFiniteNumber(position.sellPrice) ? String(position.sellPrice) : '');
     }
 
     setEditOpen(true);
@@ -554,7 +623,26 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
 
   const handleSetNewTicker = (value: string) => {
     setNewTicker(value);
-    if (value.trim()) {
+
+    if (selectedInstrument && value !== formatInstrumentInputValue(selectedInstrument)) {
+      setSelectedInstrument(null);
+    }
+
+    if (tickerError) {
+      setTickerError('');
+    }
+  };
+
+  const handleSetSelectedInstrument = (instrument: InstrumentSearchResult | null) => {
+    setSelectedInstrument(instrument);
+
+    if (instrument) {
+      setNewTicker(formatInstrumentInputValue(instrument));
+      setTickerError('');
+      return;
+    }
+
+    if (!newTicker.trim()) {
       setTickerError('');
     }
   };
@@ -641,6 +729,7 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     selected,
 
     newTicker,
+    selectedInstrument,
     newQuantity,
     newBuyPrice,
     newBuyDate,
@@ -654,6 +743,7 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     sellDateError,
 
     setNewTicker: handleSetNewTicker,
+    setSelectedInstrument: handleSetSelectedInstrument,
     setNewQuantity: handleSetNewQuantity,
     setNewBuyPrice: handleSetNewBuyPrice,
     setNewBuyDate: handleSetNewBuyDate,
@@ -664,18 +754,22 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
     openCloseDialog,
     openEditDialog,
     openDeleteDialog,
+
     closeAddDialog: () => {
       setAddOpen(false);
+      setSelectedInstrument(null);
       setTickerError('');
       setQuantityError('');
       setBuyPriceError('');
       setBuyDateError('');
     },
+
     closeCloseDialog: () => {
       setCloseOpen(false);
       setSellPriceError('');
       setSellDateError('');
     },
+
     closeEditDialog: () => {
       setEditOpen(false);
       setQuantityError('');
@@ -684,6 +778,7 @@ export function usePositionsPage(isMobile: boolean): PositionsPageVM {
       setSellPriceError('');
       setSellDateError('');
     },
+
     closeDeleteDialog: () => setDeleteOpen(false),
 
     onAddSubmit,
