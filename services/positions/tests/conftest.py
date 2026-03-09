@@ -64,6 +64,12 @@ class FakeEmitter:
 class FakeSession:
     """Marker session; fakes ignore it."""
 
+    async def commit(self) -> None:
+        return None
+
+    async def rollback(self) -> None:
+        return None
+
 
 class FakeUsersRepository:
     class EmailAlreadyExists(Exception):
@@ -278,6 +284,25 @@ class FakePositionsRepository:
             if p.sellDate is None:
                 by_user.setdefault(p.userId, []).append(p.ticker)
         return by_user
+
+
+@pytest.fixture(autouse=True)
+def stub_market_data_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        routes_mod,
+        "ticker_exists_in_market_data",
+        lambda base_url, ticker: True,
+    )
+    monkeypatch.setattr(
+        routes_mod,
+        "fetch_quotes_from_market_data",
+        lambda base_url, symbols: [],
+    )
+
+    async def fake_to_thread(func, *args, **kwargs):  # noqa: ANN001
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(routes_mod.asyncio, "to_thread", fake_to_thread)
 
 
 @pytest.fixture(scope="session")

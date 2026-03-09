@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, Query
 from starlette.requests import Request
 
-from app.api.schemas import Quote
+from app.api.schemas import InstrumentSearchResult, Quote
 from app.clients.yahoo_finance import YahooFinanceClient
 from app.core.config import Settings
 from app.services.quotes import fetch_quotes
@@ -42,4 +42,25 @@ def quotes(
             logoUrl=q.logo_url,
         )
         for q in data
+    ]
+
+
+@router.get("/api/instruments/search", response_model=list[InstrumentSearchResult])
+def search_instruments(
+    q: str = Query(..., min_length=2, description="Ticker or company name"),
+    limit: int = Query(10, ge=1, le=15),
+    client: YahooFinanceClient = Depends(get_yahoo_client),
+) -> list[InstrumentSearchResult]:
+    results = client.search_instruments(q, max_results=limit)
+
+    return [
+        InstrumentSearchResult(
+            symbol=item.symbol,
+            name=item.name,
+            exchange=item.exchange,
+            assetType=item.asset_type,
+            currency=item.currency,
+            logoUrl=item.logo_url,
+        )
+        for item in results
     ]

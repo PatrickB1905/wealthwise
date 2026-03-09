@@ -8,3 +8,12 @@ class Quote(BaseModel):
     currentPrice: float
     dailyChangePercent: float
     logoUrl: str
+
+
+class InstrumentSearchResult(BaseModel):
+    symbol: str
+    name: str
+    exchange: str
+    assetType: str
+    currency: str
+    logoUrl: str

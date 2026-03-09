@@ -5,6 +5,13 @@ import dayjs from 'dayjs';
 import theme from '@shared/theme';
 import { PositionDialogs } from './PositionDialogs';
 
+jest.mock('@features/market-data/hooks/useInstrumentSearch', () => ({
+  useInstrumentSearch: () => ({
+    data: [],
+    isFetching: false,
+  }),
+}));
+
 function baseProps() {
   return {
     tab: 'open' as const,
@@ -21,6 +28,7 @@ function baseProps() {
     onCloseDelete: jest.fn(),
 
     newTicker: '',
+    selectedInstrument: null,
     newQuantity: '',
     newBuyPrice: '',
     newBuyDate: dayjs(),
@@ -34,6 +42,7 @@ function baseProps() {
     sellDateError: '',
 
     setNewTicker: jest.fn(),
+    setSelectedInstrument: jest.fn(),
     setNewQuantity: jest.fn(),
     setNewBuyPrice: jest.fn(),
     setNewBuyDate: jest.fn(),
@@ -63,13 +72,13 @@ function renderDialog(overrides: Partial<ReturnType<typeof baseProps>> = {}) {
 describe('PositionDialogs', () => {
   it('renders inline validation messages for ticker, quantity, buy price, and buy date', () => {
     renderDialog({
-      tickerError: 'Ticker is required',
+      tickerError: 'Please select a valid ticker from the list',
       quantityError: 'Quantity must be greater than 0',
       buyPriceError: 'Buy price is required',
       buyDateError: 'Buy date is required',
     });
 
-    expect(screen.getByText('Ticker is required')).toBeInTheDocument();
+    expect(screen.getByText('Please select a valid ticker from the list')).toBeInTheDocument();
     expect(screen.getByText('Quantity must be greater than 0')).toBeInTheDocument();
     expect(screen.getByText('Buy price is required')).toBeInTheDocument();
     expect(screen.getByText('Buy date is required')).toBeInTheDocument();
@@ -81,7 +90,7 @@ describe('PositionDialogs', () => {
     const tickerInfoButton = screen.getByRole('button', { name: /ticker info/i });
     fireEvent.mouseOver(tickerInfoButton);
     expect(
-      await screen.findByText(/enter the market ticker symbol for this holding/i),
+      await screen.findByText(/search by ticker or company name and select a valid instrument/i),
     ).toBeInTheDocument();
     fireEvent.mouseLeave(tickerInfoButton);
 

@@ -137,6 +137,7 @@ const PositionsPage: React.FC = () => {
         onCloseEdit={vm.closeEditDialog}
         onCloseDelete={vm.closeDeleteDialog}
         newTicker={vm.newTicker}
+        selectedInstrument={vm.selectedInstrument}
         newQuantity={vm.newQuantity}
         newBuyPrice={vm.newBuyPrice}
         newBuyDate={vm.newBuyDate}
@@ -149,6 +150,7 @@ const PositionsPage: React.FC = () => {
         sellPriceError={vm.sellPriceError}
         sellDateError={vm.sellDateError}
         setNewTicker={vm.setNewTicker}
+        setSelectedInstrument={vm.setSelectedInstrument}
         setNewQuantity={vm.setNewQuantity}
         setNewBuyPrice={vm.setNewBuyPrice}
         setNewBuyDate={vm.setNewBuyDate}

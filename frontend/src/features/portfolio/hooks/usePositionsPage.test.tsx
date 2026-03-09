@@ -44,6 +44,15 @@ function createWrapper() {
 
 const mockedApi = API as jest.Mocked<typeof API>;
 
+const selectedInstrument = {
+  symbol: 'AAPL',
+  name: 'Apple Inc.',
+  exchange: 'NASDAQ',
+  assetType: 'EQUITY',
+  currency: 'USD',
+  logoUrl: 'https://logo.example/aapl.png',
+};
+
 describe('usePositionsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -75,7 +84,7 @@ describe('usePositionsPage', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.tickerError).toBe('Ticker is required');
+      expect(result.current.tickerError).toBe('Please select a valid ticker from the list');
     });
     expect(mockedApi.post).not.toHaveBeenCalled();
   });
@@ -90,7 +99,8 @@ describe('usePositionsPage', () => {
     });
 
     act(() => {
-      result.current.setNewTicker('AAPL');
+      result.current.setSelectedInstrument(selectedInstrument);
+      result.current.setNewTicker('AAPL - Apple Inc.');
     });
 
     act(() => {
@@ -113,7 +123,8 @@ describe('usePositionsPage', () => {
     });
 
     act(() => {
-      result.current.setNewTicker('AAPL');
+      result.current.setSelectedInstrument(selectedInstrument);
+      result.current.setNewTicker('AAPL - Apple Inc.');
       result.current.setNewQuantity('1');
     });
 
@@ -137,7 +148,8 @@ describe('usePositionsPage', () => {
     });
 
     act(() => {
-      result.current.setNewTicker('AAPL');
+      result.current.setSelectedInstrument(selectedInstrument);
+      result.current.setNewTicker('AAPL - Apple Inc.');
       result.current.setNewQuantity('1');
       result.current.setNewBuyPrice('0');
     });
@@ -162,7 +174,8 @@ describe('usePositionsPage', () => {
     });
 
     act(() => {
-      result.current.setNewTicker('AAPL');
+      result.current.setSelectedInstrument(selectedInstrument);
+      result.current.setNewTicker('AAPL - Apple Inc.');
       result.current.setNewQuantity('1');
       result.current.setNewBuyPrice('10');
       result.current.setNewBuyDate(null);
@@ -189,7 +202,8 @@ describe('usePositionsPage', () => {
     });
 
     act(() => {
-      result.current.setNewTicker('AAPL');
+      result.current.setSelectedInstrument(selectedInstrument);
+      result.current.setNewTicker('AAPL - Apple Inc.');
       result.current.setNewQuantity('1');
       result.current.setNewBuyPrice('10');
       result.current.setNewBuyDate(invalidDate);
@@ -215,7 +229,8 @@ describe('usePositionsPage', () => {
     });
 
     act(() => {
-      result.current.setNewTicker('aapl');
+      result.current.setSelectedInstrument(selectedInstrument);
+      result.current.setNewTicker('AAPL - Apple Inc.');
       result.current.setNewQuantity('0.1');
       result.current.setNewBuyPrice('10');
     });

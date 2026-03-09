@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -12,9 +13,11 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import type { Dayjs } from 'dayjs';
 
 import { AppTooltip, KpiInfoButton } from '@shared/ui';
+import type { InstrumentSearchResult } from '@features/market-data/api/marketDataClient';
 
 import type { Position } from '../types/position';
 import { DialogFieldLabelWrap, DialogSubmitButton } from './PositionDialogs.styles';
+import { InstrumentAutocomplete } from './InstrumentAutocomplete';
 
 type Props = {
   tab: 'open' | 'closed';
@@ -34,6 +37,7 @@ type Props = {
 
   // Form values
   newTicker: string;
+  selectedInstrument: InstrumentSearchResult | null;
   newQuantity: string;
   newBuyPrice: string;
   newBuyDate: Dayjs | null;
@@ -48,6 +52,7 @@ type Props = {
 
   // Setters
   setNewTicker: (v: string) => void;
+  setSelectedInstrument: (instrument: InstrumentSearchResult | null) => void;
   setNewQuantity: (v: string) => void;
   setNewBuyPrice: (v: string) => void;
   setNewBuyDate: (d: Dayjs | null) => void;
@@ -78,7 +83,7 @@ const ANY_NUMBER_INPUT_PROPS = {
 
 type FieldLabelWithTipProps = {
   label: string;
-  tip: React.ReactNode;
+  tip: ReactNode;
 };
 
 function FieldLabelWithTip({ label, tip }: FieldLabelWithTipProps) {
@@ -87,12 +92,12 @@ function FieldLabelWithTip({ label, tip }: FieldLabelWithTipProps) {
       <span>{label}</span>
       <AppTooltip title={tip}>
         <span>
-          <KpiInfoButton 
-		    aria-label={`${label} info`}
-			tabIndex={-1}
-			disableRipple
-			disableFocusRipple
-		  >
+          <KpiInfoButton
+            aria-label={`${label} info`}
+            tabIndex={-1}
+            disableRipple
+            disableFocusRipple
+          >
             <InfoOutlinedIcon fontSize="inherit" />
           </KpiInfoButton>
         </span>
@@ -102,10 +107,10 @@ function FieldLabelWithTip({ label, tip }: FieldLabelWithTipProps) {
 }
 
 const TICKER_TIP =
-  'Enter the market ticker symbol for this holding, for example AMZN, MSFT, or AAPL.';
+  'Search by ticker or company name and select a valid instrument from the list. Only supported market symbols can be added.';
 
 const QUANTITY_TIP =
-  'Enter the number of shares purchased. Fractional shares are supported, but the quantity must be greater than 0';
+  'Enter the number of shares purchased. Fractional shares are supported, but the quantity must be greater than 0.';
 
 const BUY_PRICE_TIP =
   'Enter the purchase price per share. This value is required and must be greater than 0.';
@@ -132,6 +137,7 @@ export function PositionDialogs(props: Props) {
     onCloseDelete,
 
     newTicker,
+    selectedInstrument,
     newQuantity,
     newBuyPrice,
     newBuyDate,
@@ -145,6 +151,7 @@ export function PositionDialogs(props: Props) {
     sellDateError,
 
     setNewTicker,
+    setSelectedInstrument,
     setNewQuantity,
     setNewBuyPrice,
     setNewBuyDate,
@@ -167,15 +174,16 @@ export function PositionDialogs(props: Props) {
       <Dialog open={addOpen} onClose={onCloseAdd} fullWidth maxWidth="sm">
         <DialogTitle>Add New Position</DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            margin="dense"
+          <InstrumentAutocomplete
             label={<FieldLabelWithTip label="Ticker" tip={TICKER_TIP} />}
-            value={newTicker}
+            inputValue={newTicker}
+            selectedInstrument={selectedInstrument}
             error={Boolean(tickerError)}
             helperText={tickerError}
-            onChange={(e) => setNewTicker(e.target.value)}
+            onInputChange={setNewTicker}
+            onSelectionChange={setSelectedInstrument}
           />
+
           <TextField
             fullWidth
             margin="dense"
@@ -187,6 +195,7 @@ export function PositionDialogs(props: Props) {
             inputProps={POSITIVE_NUMBER_INPUT_PROPS}
             onChange={(e) => setNewQuantity(e.target.value)}
           />
+
           <TextField
             fullWidth
             margin="dense"
@@ -290,6 +299,7 @@ export function PositionDialogs(props: Props) {
             inputProps={POSITIVE_NUMBER_INPUT_PROPS}
             onChange={(e) => setNewQuantity(e.target.value)}
           />
+
           <TextField
             fullWidth
             margin="dense"
@@ -332,6 +342,7 @@ export function PositionDialogs(props: Props) {
                 inputProps={ANY_NUMBER_INPUT_PROPS}
                 onChange={(e) => setNewSellPrice(e.target.value)}
               />
+
               <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <DatePicker
                   label={<FieldLabelWithTip label="Sell Date" tip={DATE_TIP} />}
