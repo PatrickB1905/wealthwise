@@ -5,8 +5,8 @@ import MenuItem from '@mui/material/MenuItem';
 
 import MenuIcon from '@mui/icons-material/Menu';
 
+import BrandLogo from '@shared/ui/layout/BrandLogo';
 import {
-  BrandWordmark,
   CTAOutlineButton,
   MarketingMenuButton,
   MarketingNavActions,
@@ -48,9 +48,7 @@ export function HomeTopNav({
     <MarketingTopNav>
       <MarketingTopNavInner maxWidth="lg">
         <Stack direction="row" spacing={1.25} alignItems="center">
-          <BrandWordmark variant="h6" component="div">
-            WealthWise
-          </BrandWordmark>
+          <BrandLogo variant="marketing" href="/" height={36} />
         </Stack>
 
         <MarketingNavActions>
