@@ -3,9 +3,9 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 
-import heroImg from '../../../assets/images/hero.png';
-import analyticsScreenshotImg from '../../../assets/images/analytics_page_img.png';
-import portfolioScreenshotImg from '../../../assets/images/portfolio_page_img.png';
+import heroImg from '../../../assets/images/marketing/hero/hero.png';
+import analyticsScreenshotImg from '../../../assets/images/marketing/screenshots/wealthwise-analytics-screenshot.png';
+import portfolioScreenshotImg from '../../../assets/images/marketing/screenshots/wealthwise-portfolio-screenshot.png';
 
 import { FEATURE_CARDS, FAQS, HIGHLIGHTS, STEPS, TRUST_ITEMS, VALUE_PROPS } from '../constants';
 import { useHomePage } from '../hooks/useHomePage';

@@ -13,8 +13,10 @@ import { useTheme } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@features/auth';
+import BrandLogo from './BrandLogo';
 import {
   SidebarBrand,
+  SidebarBrandLogoWrap,
   SidebarContainer,
   SidebarDivider,
   SidebarIcon,
@@ -80,7 +82,11 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onMobileClose }) => {
 
   const content = (
     <SidebarInner>
-      <SidebarBrand>WealthWise</SidebarBrand>
+      <SidebarBrand>
+        <SidebarBrandLogoWrap>
+          <BrandLogo variant="sidebar" href="/app/positions" height={34} />
+        </SidebarBrandLogoWrap>
+      </SidebarBrand>
 
       <SidebarDivider />
 

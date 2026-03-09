@@ -1,13 +1,11 @@
 import React from 'react';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import Typography from '@mui/material/Typography';
 
+import BrandLogo from '@shared/ui/layout/BrandLogo';
 import {
-  CTAOutlineButton,
+  LoginBackButton,
   MarketingNavActions,
   MarketingNavLink,
-  MarketingNavPill,
   MarketingTopNav,
   MarketingTopNavInner,
 } from '@shared/ui/layout/Styled';
@@ -21,31 +19,12 @@ export const LoginTopNav: React.FC<Props> = ({ onBackToHome, onCreateAccount }) 
   return (
     <MarketingTopNav>
       <MarketingTopNavInner maxWidth="lg">
-        <MarketingNavPill>
-          <LockOutlinedIcon
-            fontSize="small"
-            style={{ opacity: 0.9, color: 'rgba(255,255,255,0.9)' }}
-          />
-          <Typography
-            sx={{
-              color: 'rgba(255,255,255,0.9)',
-              fontWeight: 900,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            WealthWise
-          </Typography>
-        </MarketingNavPill>
+        <BrandLogo variant="marketing" href="/" height={36} />
 
         <MarketingNavActions>
-          <CTAOutlineButton
-            size="small"
-            startIcon={<ArrowBackIcon />}
-            onClick={onBackToHome}
-            sx={{ borderColor: 'rgba(255,255,255,0.55)' }}
-          >
+          <LoginBackButton size="small" startIcon={<ArrowBackIcon />} onClick={onBackToHome}>
             Back to home
-          </CTAOutlineButton>
+          </LoginBackButton>
 
           <MarketingNavLink onClick={onCreateAccount} aria-label="Go to register">
             Create account

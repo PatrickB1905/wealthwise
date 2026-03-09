@@ -32,7 +32,7 @@ import DialogActions from '@mui/material/DialogActions';
 import LinearProgress from '@mui/material/LinearProgress';
 
 import { SIDEBAR_WIDTH } from './styled.utils';
-import heroImgUrl from '@assets/images/hero.png';
+import heroImgUrl from '@assets/images/marketing/hero/hero.png';
 
 type Tone = 'positive' | 'negative' | 'neutral';
 
@@ -205,15 +205,15 @@ export const SidebarInner = styled('div')(({ theme }) => ({
 }));
 
 export const SidebarBrand = styled(Box)(({ theme }) => ({
-  height: theme.spacing(7),
+  minHeight: theme.spacing(7),
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
+  paddingLeft: theme.spacing(0.5),
+  paddingRight: theme.spacing(0.5),
   borderRadius: theme.shape.borderRadius,
-  fontWeight: 900,
-  letterSpacing: '-0.02em',
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(theme.palette.primary.main, 0.04)})`,
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+  background: 'transparent',
+  border: 'none',
   color: theme.palette.text.primary,
 }));
 
@@ -418,6 +418,51 @@ export const MetricHeaderRow = styled('div')(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: theme.spacing(1),
+}));
+
+export const SidebarBrandLogoWrap = styled(Box)(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: 40,
+  width: '100%',
+}));
+
+export const BrandLogoImage = styled('img', {
+  shouldForwardProp: (prop) => prop !== 'logoVariant' && prop !== 'resolvedHeight',
+})<{
+  logoVariant: 'marketing' | 'sidebar';
+  resolvedHeight: number;
+}>(({ theme, logoVariant, resolvedHeight }) => ({
+  display: 'block',
+  width: 'auto',
+  objectFit: 'contain',
+  userSelect: 'none',
+  height: resolvedHeight,
+  maxWidth: logoVariant === 'sidebar' ? 190 : 220,
+
+  [theme.breakpoints.down('sm')]: {
+    height: Math.max(28, resolvedHeight - 6),
+    maxWidth: logoVariant === 'sidebar' ? 170 : 190,
+  },
+}));
+
+export const BrandLogoLink = styled('a')(() => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  textDecoration: 'none',
+  lineHeight: 0,
+  outline: 'none',
+  boxShadow: 'none',
+  WebkitTapHighlightColor: 'transparent',
+
+  '&:focus': {
+    outline: 'none',
+  },
+
+  '&:focus-visible': {
+    outline: 'none',
+    boxShadow: 'none',
+  },
 }));
 
 /** =========================
@@ -1622,6 +1667,14 @@ export const CTAOutlineButton = styled(Button)(({ theme }) => ({
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderColor: theme.palette.common.white,
   },
+}));
+
+export const LoginBackButton = styled(CTAOutlineButton)(() => ({
+  borderColor: 'rgba(255,255,255,0.55)',
+}));
+
+export const RegisterBackButton = styled(CTAOutlineButton)(() => ({
+  borderColor: 'rgba(255,255,255,0.55)',
 }));
 
 export const SectionWrap = styled(Container)(({ theme }) => ({
