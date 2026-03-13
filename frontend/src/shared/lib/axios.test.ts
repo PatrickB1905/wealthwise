@@ -1,3 +1,5 @@
+export {};
+
 const mockCreateHttpClient = jest.fn();
 
 jest.mock('./http', () => ({
